@@ -6,84 +6,73 @@
 
 ## Mathematical Definition
 
-The discrete convolution of two signals x[n] and h[n] is:
+The discrete convolution of two signals $x[n]$ and $h[n]$ is:
 
-```
-y[n] = x[n] * h[n] = ∑ x[k] · h[n-k]
-                     k=-∞
-```
+$$y[n] = x[n] * h[n] = \sum_{k=-\infty}^{\infty} x[k] \cdot h[n-k]$$
 
 Or equivalently (by changing variables):
 
-```
-y[n] = ∑ h[k] · x[n-k]
-       k=-∞
-```
+$$y[n] = \sum_{k=-\infty}^{\infty} h[k] \cdot x[n-k]$$
 
-The `*` symbol denotes convolution (not multiplication).
+The $*$ symbol denotes convolution (not multiplication).
 
 ## Intuitive Understanding
 
 Think of convolution as **sliding**, **flipping**, and **summing**:
 
-1. **Flip** the impulse response h[k] to get h[-k]
-2. **Slide** it to position n to get h[n-k]
-3. **Multiply** element-wise with x[k]
-4. **Sum** all products to get y[n]
+1. **Flip** the impulse response $h[k]$ to get $h[-k]$
+2. **Slide** it to position $n$ to get $h[n-k]$
+3. **Multiply** element-wise with $x[k]$
+4. **Sum** all products to get $y[n]$
 
 ### Visual Example
 
 For a simple case:
-```
-x[n] = [1, 2, 3]
-h[n] = [0.5, 0.5]
-```
+
+$$x[n] = [1, 2, 3], \quad h[n] = [0.5, 0.5]$$
 
 The convolution process:
-- At n=0: y[0] = 1×0.5 = 0.5
-- At n=1: y[1] = 1×0.5 + 2×0.5 = 1.5
-- At n=2: y[2] = 2×0.5 + 3×0.5 = 2.5
-- At n=3: y[3] = 3×0.5 = 1.5
 
-Result: y[n] = [0.5, 1.5, 2.5, 1.5]
+- At $n=0$: $y[0] = 1 \times 0.5 = 0.5$
+- At $n=1$: $y[1] = 1 \times 0.5 + 2 \times 0.5 = 1.5$
+- At $n=2$: $y[2] = 2 \times 0.5 + 3 \times 0.5 = 2.5$
+- At $n=3$: $y[3] = 3 \times 0.5 = 1.5$
+
+Result: $y[n] = [0.5, 1.5, 2.5, 1.5]$
 
 ## Properties of Convolution
 
 ### 1. Commutativity
-```
-x[n] * h[n] = h[n] * x[n]
-```
+
+$$x[n] * h[n] = h[n] * x[n]$$
 
 ### 2. Associativity
-```
-x[n] * (h₁[n] * h₂[n]) = (x[n] * h₁[n]) * h₂[n]
-```
+
+$$x[n] * (h_1[n] * h_2[n]) = (x[n] * h_1[n]) * h_2[n]$$
 
 ### 3. Distributivity
-```
-x[n] * (h₁[n] + h₂[n]) = x[n] * h₁[n] + x[n] * h₂[n]
-```
+
+$$x[n] * (h_1[n] + h_2[n]) = x[n] * h_1[n] + x[n] * h_2[n]$$
 
 ### 4. Identity
-```
-x[n] * δ[n] = x[n]
-```
+
+$$x[n] * \delta[n] = x[n]$$
 
 The impulse is the identity element for convolution.
 
 ### 5. Shift Property
-```
-x[n] * δ[n - n₀] = x[n - n₀]
-```
+
+$$x[n] * \delta[n - n_0] = x[n - n_0]$$
 
 Convolving with a shifted impulse shifts the signal.
 
 ## Output Length
 
 For finite-length signals:
-- If x[n] has length M
-- If h[n] has length N
-- Then y[n] = x[n] * h[n] has length M + N - 1
+
+- If $x[n]$ has length $M$
+- If $h[n]$ has length $N$
+- Then $y[n] = x[n] * h[n]$ has length $M + N - 1$
 
 This is important for practical implementations!
 
@@ -92,39 +81,46 @@ This is important for practical implementations!
 When we convolve a signal with an impulse response, we're **filtering** the signal:
 
 ### Low-Pass Filter (Smoothing)
-```
-h[n] = [1/3, 1/3, 1/3]  # Moving average
-```
+
+$$h[n] = \left[\frac{1}{3}, \frac{1}{3}, \frac{1}{3}\right] \quad \text{(Moving average)}$$
+
 Smooths the signal by averaging neighboring points.
 
 ### High-Pass Filter (Edge Detection)
-```
-h[n] = [1, -1]  # First difference
-```
+
+$$h[n] = [1, -1] \quad \text{(First difference)}$$
+
 Highlights rapid changes in the signal.
 
 ## Implementation Methods
 
 ### 1. Direct Convolution
+
 Compute the sum directly from the definition.
+
 - Simple to understand
-- Computational complexity: O(M×N)
+- Computational complexity: $O(M \times N)$
 
 ### 2. FFT-Based Convolution
+
 Use the convolution theorem: convolution in time = multiplication in frequency.
+
 - Much faster for long signals
-- Computational complexity: O((M+N) log(M+N))
+- Computational complexity: $O((M+N) \log(M+N))$
 
 ## Circular vs. Linear Convolution
 
 ### Linear Convolution
+
 The standard convolution we've described.
 
 ### Circular Convolution
+
 Used in FFT-based methods. Assumes signals are periodic.
 
 To get linear convolution from circular:
-1. Zero-pad both signals to length M + N - 1
+
+1. Zero-pad both signals to length $M + N - 1$
 2. Compute circular convolution (using FFT)
 3. Result is equivalent to linear convolution
 
@@ -139,6 +135,7 @@ To get linear convolution from circular:
 ## Example: Noise Reduction
 
 Given a noisy signal, convolve with a moving average filter:
+
 ```python
 noisy_signal = true_signal + noise
 h = [1/5, 1/5, 1/5, 1/5, 1/5]
