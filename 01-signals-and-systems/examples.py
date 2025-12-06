@@ -48,14 +48,56 @@ def sinusoidal_signal(n, frequency, amplitude=1.0, phase=0.0):
 
     Args:
         n: Array of sample indices
-        frequency: Normalized frequency (0 to 0.5 for discrete signals)
+        frequency: Normalized frequency f (cycles/sample), typically 0 to 0.5
+                   Note: f = F/Fs where F is continuous freq and Fs is sampling rate
         amplitude: Signal amplitude
         phase: Phase offset in radians
 
     Returns:
-        Sinusoidal signal
+        Sinusoidal signal x[n] = A*cos(2*pi*f*n + phi)
+
+    Note:
+        - Normalized frequency f is in cycles per sample
+        - Angular frequency omega = 2*pi*f radians/sample
+        - Nyquist frequency is f = 0.5 (omega = pi)
+        - Frequencies above Nyquist alias to lower frequencies
     """
     return amplitude * np.cos(2 * np.pi * frequency * n + phase)
+
+
+def sample_continuous_signal(F, Fs, duration, amplitude=1.0, phase=0.0):
+    """
+    Sample a continuous sinusoidal signal to demonstrate sampling relationship.
+
+    Args:
+        F: Continuous frequency in Hz
+        Fs: Sampling rate in Hz (samples/second)
+        duration: Signal duration in seconds
+        amplitude: Signal amplitude
+        phase: Phase offset in radians
+
+    Returns:
+        t: Continuous time array (for plotting)
+        x_t: Continuous signal values
+        n: Sample indices
+        x_n: Sampled signal values
+        f: Normalized frequency (F/Fs)
+
+    Example:
+        # Sample a 5 Hz signal at 50 Hz for 1 second
+        t, x_t, n, x_n, f = sample_continuous_signal(5, 50, 1.0)
+        # f = 5/50 = 0.1 cycles/sample
+    """
+    # Continuous signal (for visualization)
+    t = np.linspace(0, duration, 1000)
+    x_t = amplitude * np.cos(2 * np.pi * F * t + phase)
+
+    # Sampled signal
+    n = np.arange(0, int(duration * Fs))
+    f = F / Fs  # Normalized frequency
+    x_n = sinusoidal_signal(n, f, amplitude, phase)
+
+    return t, x_t, n, x_n, f
 
 
 def moving_average_impulse_response(window_size):
@@ -161,8 +203,48 @@ if __name__ == "__main__":
     plot_signal(n, x_sin, title="Sinusoidal Signal (f=0.1, A=2.0)")
     plt.show()
 
-    # Example 2: Moving average impulse response
-    print("\nExample 2: Moving Average Filter Impulse Response\n")
+    # Example 2: Sampling demonstration
+    print("\nExample 2: Sampling a Continuous Signal\n")
+
+    # Sample a 5 Hz signal at 50 Hz sampling rate
+    F = 5  # Hz
+    Fs = 50  # samples/second
+    duration = 1.0  # seconds
+
+    t, x_t, n, x_n, f = sample_continuous_signal(F, Fs, duration)
+
+    print(f"Continuous frequency F = {F} Hz")
+    print(f"Sampling rate Fs = {Fs} Hz")
+    print(f"Normalized frequency f = F/Fs = {f} cycles/sample")
+    print(f"Period in samples: N = 1/f = {1/f} samples")
+    print(f"Angular frequency: ω = 2πf = {2*np.pi*f:.4f} rad/sample\n")
+
+    plt.figure(figsize=(14, 5))
+
+    # Plot continuous and sampled signals
+    plt.subplot(1, 2, 1)
+    plt.plot(t, x_t, 'b-', linewidth=1.5, label='Continuous signal', alpha=0.7)
+    t_samples = n / Fs  # Convert sample indices to time
+    plt.stem(t_samples, x_n, linefmt='r-', markerfmt='ro', basefmt=' ', label='Samples')
+    plt.xlabel('Time (seconds)')
+    plt.ylabel('Amplitude')
+    plt.title(f'Sampling: {F} Hz signal at {Fs} Hz rate')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+
+    # Plot discrete signal with sample indices
+    plt.subplot(1, 2, 2)
+    plt.stem(n[:50], x_n[:50], basefmt=' ')  # Show first 50 samples
+    plt.xlabel('Sample index n')
+    plt.ylabel('x[n]')
+    plt.title(f'Discrete Signal (f = {f}, first 50 samples)')
+    plt.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.show()
+
+    # Example 3: Moving average impulse response
+    print("\nExample 3: Moving Average Filter Impulse Response\n")
 
     h_ma = moving_average_impulse_response(5)
     n_h = np.arange(len(h_ma))
@@ -171,8 +253,8 @@ if __name__ == "__main__":
     print(f"Impulse response: {h_ma}")
     print(f"Sum of coefficients: {np.sum(h_ma)}")
 
-    # Example 3: Linearity verification
-    print("\nExample 3: Verifying System Linearity\n")
+    # Example 4: Linearity verification
+    print("\nExample 4: Verifying System Linearity\n")
 
     n_test = np.arange(-5, 6)
     x1 = np.random.randn(len(n_test))

@@ -10,29 +10,90 @@ A **signal** is a function that conveys information about the behavior or attrib
 
 Signals defined for every value of time $t$ in a continuous interval.
 
-**Example:**
+**General Sinusoidal Form:**
 
-$$x(t) = A \cos(2\pi f t)$$
+$$x(t) = A \cos(\Omega t + \phi) = A \cos(2\pi F t + \phi)$$
 
-Properties:
+where:
+- $A$ = amplitude
+- $\Omega$ = angular frequency (radians/second)
+- $F$ = frequency in Hz (cycles/second), where $\Omega = 2\pi F$
+- $\phi$ = phase (radians)
+- $T = 1/F$ = period (seconds)
 
-- Defined for all real values of $t$
-- Amplitude can vary smoothly
+**Key Properties:**
+
+- Defined for all real values of $t \in \mathbb{R}$
+- Periodic if $x(t) = x(t + T)$ for some $T > 0$
+- Distinct frequencies always produce distinct signals
 - Common in analog systems
 
 ### 2. Discrete-Time Signals
 
-Signals defined only at discrete points in time, typically denoted as $x[n]$ where $n$ is an integer.
+Signals defined only at discrete points in time, typically denoted as $x[n]$ where $n$ is an integer index.
 
-**Example:**
+**General Sinusoidal Form:**
 
-$$x[n] = A \cos(2\pi f n)$$
+$$x[n] = A \cos(\omega n + \phi) = A \cos(2\pi f n + \phi)$$
 
-Properties:
+where:
+- $A$ = amplitude
+- $\omega$ = normalized angular frequency (radians/sample), $\omega \in [0, 2\pi]$
+- $f$ = normalized frequency (cycles/sample), $f \in [0, 1]$, where $\omega = 2\pi f$
+- $\phi$ = phase (radians)
+- $N$ = period (samples), if periodic
 
-- Defined only at integer values of $n$
-- Result from sampling continuous signals
-- Foundation of digital signal processing
+**Relationship to Sampling:**
+
+When sampling a continuous signal $x(t)$ at rate $F_s$ (samples/second):
+
+$$x[n] = x(nT_s) \quad \text{where } T_s = \frac{1}{F_s}$$
+
+The normalized frequency relates to the continuous frequency as:
+
+$$f = \frac{F}{F_s} \quad \text{or} \quad \omega = \frac{\Omega}{F_s} = \Omega T_s$$
+
+**Important Properties (Oppenheim & Schafer):**
+
+- Defined only for integer values $n \in \mathbb{Z}$
+- Periodic only if $\omega/(2\pi)$ is rational
+- **Frequencies separated by multiples of $2\pi$ are identical:**
+  $$\cos(\omega n) = \cos((\omega + 2\pi k)n) \quad \text{for any integer } k$$
+- **Nyquist frequency**: Maximum distinguishable frequency is $f = 0.5$ (or $\omega = \pi$)
+- Higher frequencies alias to lower frequencies (folding)
+
+## Periodicity
+
+### Continuous-Time Periodicity
+
+A continuous signal $x(t)$ is periodic with period $T$ if:
+
+$$x(t) = x(t + T) \quad \text{for all } t$$
+
+For a sinusoid $x(t) = \cos(\Omega t)$, the period is:
+
+$$T = \frac{2\pi}{\Omega} = \frac{1}{F}$$
+
+### Discrete-Time Periodicity
+
+A discrete signal $x[n]$ is periodic with period $N$ (must be an integer) if:
+
+$$x[n] = x[n + N] \quad \text{for all } n$$
+
+For a sinusoid $x[n] = \cos(\omega n)$:
+
+$$x[n + N] = \cos(\omega(n + N)) = \cos(\omega n + \omega N)$$
+
+This equals $x[n]$ only if $\omega N = 2\pi k$ for some integer $k$, which means:
+
+$$\omega = \frac{2\pi k}{N} \quad \text{or equivalently} \quad f = \frac{k}{N}$$
+
+**Key Insight:** A discrete sinusoid is periodic only if its normalized frequency $f$ is a rational number.
+
+**Examples:**
+- $f = 0.25 = 1/4$: periodic with $N = 4$ samples
+- $f = 0.1 = 1/10$: periodic with $N = 10$ samples
+- $f = \pi/10$: NOT periodic (irrational ratio to $2\pi$)
 
 ## Key Signal Types
 
