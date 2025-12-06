@@ -2,34 +2,69 @@
 
 An exploration tutorial on signal processing, filtering, and kernel-based image processing, progressing from fundamentals to GPU-accelerated implementations.
 
+Based on Oppenheim & Schafer's "Discrete-Time Signal Processing"
+
 ## Overview
 
 This repository provides a hands-on learning path through signal processing and filtering concepts, starting with basic 1D signals and progressing to high-performance GPU-based 2D image filtering. Each module includes theory, implementations, visualizations, and practical examples.
 
 ## Learning Path
 
-### Phase 1: Fundamentals
-1. **[Signals and Systems](01-signals-and-systems/)** - Continuous and discrete signals, impulse response, LTI systems
-2. **[1D Convolution](02-1d-convolution/)** - Mathematical foundation, implementation from scratch, practical examples
-3. **[Digital Signals](03-digital-signals/)** - Sampling theorem, quantization, DFT/FFT analysis
+### Phase 1: Time Domain Fundamentals
 
-### Phase 2: Analysis Tools
-4. **[Correlation](04-correlation/)** - Auto-correlation, cross-correlation, pattern matching applications
+1. **[Signals and Systems](01-signals-and-systems/)** - Continuous and discrete signals, impulse response, LTI systems, periodicity
+2. **[1D Convolution](02-1d-convolution/)** - Mathematical foundation, direct and FFT-based implementation, filtering applications
 
-### Phase 3: Image Processing
-5. **[2D Signals and Images](05-2d-signals-images/)** - Images as 2D signals, kernel representation
-6. **[2D Convolution and Image Filtering](06-2d-convolution/)** - Extending convolution to 2D, basic image filters
-7. **[Advanced Filters](07-advanced-filters/)** - Gaussian blur, edge detection (Sobel, Laplacian), separable filters
+### Phase 2: Frequency Domain Analysis
 
-### Phase 4: Performance Optimization
-8. **[GPU Acceleration Basics](08-gpu-basics/)** - Parallel computing concepts, CUDA/OpenCL introduction
-9. **[GPU Image Filtering](09-gpu-image-filtering/)** - High-performance kernel-based filtering on GPU
+3. **[DTFT and Sampling](03-dtft-sampling/)** - Discrete-Time Fourier Transform, sampling theorem, aliasing, Nyquist criterion
+4. **[DFT and FFT](04-dft-fft/)** - Discrete Fourier Transform, FFT algorithm, frequency bins, computational aspects
+5. **[Frequency Domain Filtering](05-frequency-filtering/)** - Convolution theorem, spectral analysis, filter design in frequency domain
+6. **[Windowing and Spectral Analysis](06-windowing/)** - Window functions, spectral leakage, zero-padding effects
+
+### Phase 3: Correlation and Analysis Tools
+
+7. **[Correlation](07-correlation/)** - Auto-correlation, cross-correlation, pattern matching applications
+
+### Phase 4: 2D Signal Processing and Images
+
+8. **[2D Signals and Images](08-2d-signals/)** - Images as 2D signals, 2D DTFT, 2D DFT, separable transforms
+9. **[2D Filtering and Convolution](09-2d-filtering/)** - 2D convolution, frequency domain filtering, separable filters
+10. **[Advanced Image Filters](10-advanced-filters/)** - Gaussian blur, edge detection (Sobel, Laplacian, Canny), morphological operations
+
+### Phase 5: High-Performance Computing
+
+11. **[GPU Acceleration Basics](11-gpu-basics/)** - Parallel computing concepts, CUDA/OpenCL introduction, memory management
+12. **[GPU Image Filtering](12-gpu-filtering/)** - High-performance kernel-based filtering on GPU, optimization techniques
+
+## Key Concepts Covered
+
+### Fourier Transform Family
+
+Understanding the relationships between different Fourier transforms:
+
+- **CTFT** (Continuous-Time FT): Continuous aperiodic signals
+- **FS** (Fourier Series): Continuous periodic signals
+- **DTFT** (Discrete-Time FT): Discrete aperiodic signals
+- **DFT** (Discrete FT): Discrete periodic/finite-length signals
+
+### Duality Principle
+
+> **Periodicity in one domain ⟺ Discreteness in the other domain**
+
+| Transform | Time Domain | Frequency Domain |
+|-----------|-------------|------------------|
+| CTFT | Continuous, Aperiodic | Continuous, Aperiodic |
+| FS | Continuous, Periodic | Discrete, Aperiodic |
+| DTFT | Discrete, Aperiodic | Continuous, Periodic |
+| DFT | Discrete, Periodic | Discrete, Periodic |
 
 ## Prerequisites
 
 - Python 3.8+
 - Basic understanding of linear algebra
 - Familiarity with NumPy
+- Understanding of complex numbers
 
 ## Installation
 
@@ -45,10 +80,12 @@ pip install -r requirements.txt
 ## Usage
 
 Each module is self-contained with:
-- Theory documentation (README.md)
+
+- Theory documentation (README.md) with LaTeX equations
 - Python implementations
-- Jupyter notebooks with examples
+- Jupyter notebooks with interactive examples
 - Exercises and solutions
+- Mermaid diagrams for visualization
 
 Start with Module 1 and progress sequentially for the best learning experience.
 
@@ -58,17 +95,25 @@ Start with Module 1 and progress sequentially for the best learning experience.
 filtering/
 ├── 01-signals-and-systems/
 ├── 02-1d-convolution/
-├── 03-digital-signals/
-├── 04-correlation/
-├── 05-2d-signals-images/
-├── 06-2d-convolution/
-├── 07-advanced-filters/
-├── 08-gpu-basics/
-├── 09-gpu-image-filtering/
+├── 03-dtft-sampling/
+├── 04-dft-fft/
+├── 05-frequency-filtering/
+├── 06-windowing/
+├── 07-correlation/
+├── 08-2d-signals/
+├── 09-2d-filtering/
+├── 10-advanced-filters/
+├── 11-gpu-basics/
+├── 12-gpu-filtering/
 ├── assets/              # Images and resources
 ├── utils/               # Shared utility functions
 └── requirements.txt
 ```
+
+## References
+
+- Oppenheim, A. V., & Schafer, R. W. (2009). *Discrete-Time Signal Processing* (3rd ed.). Prentice Hall.
+- Oppenheim, A. V., Willsky, A. S., & Nawab, S. H. (1996). *Signals and Systems* (2nd ed.). Prentice Hall.
 
 ## Contributing
 
