@@ -1,10 +1,14 @@
 """
-Module 12: GPU Image Filtering
+Module 13: GPU Image Filtering
 Practical GPU-accelerated image processing implementations
 
-Note: Requires CuPy (CUDA). Install with:
+Builds on Module 11 (GPU Fundamentals) and Module 12 (NVIDIA Libraries)
+to demonstrate practical image filtering using CuPy, Triton, and custom CUDA.
+
+Note: Requires CuPy and optionally Triton. Install with:
   pip install cupy-cuda11x  # for CUDA 11.x
   pip install cupy-cuda12x  # for CUDA 12.x
+  pip install triton>=2.0.0 torch>=2.0.0  # for Triton examples
 
 For systems without GPU, examples show CPU fallback.
 """

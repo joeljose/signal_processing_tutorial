@@ -35,8 +35,9 @@ This repository provides a hands-on learning path through signal processing and 
 
 ### Phase 5: High-Performance Computing
 
-11. **[GPU Acceleration Basics](11-gpu-acceleration/)** - Parallel computing concepts, CUDA/OpenCL introduction, memory management
-12. **[GPU Image Filtering](12-gpu-image-filtering/)** - High-performance kernel-based filtering on GPU, optimization techniques
+11. **[GPU Acceleration Basics](11-gpu-acceleration/)** - Parallel computing concepts, GPU programming frameworks (CUDA, CuPy, Triton), memory management
+12. **[NVIDIA Libraries](12-nvidia-libraries/)** - Production-grade GPU libraries: cuFFT (FFT), NPP (image processing), Thrust (parallel algorithms)
+13. **[GPU Image Filtering](13-gpu-image-filtering/)** - Practical GPU-accelerated filtering implementations using multiple frameworks
 
 ## Key Concepts Covered
 
@@ -105,7 +106,8 @@ filtering/
 ├── 09-2d-dft-filtering/
 ├── 10-advanced-filters/
 ├── 11-gpu-acceleration/
-├── 12-gpu-image-filtering/
+├── 12-nvidia-libraries/
+├── 13-gpu-image-filtering/
 ├── .gitignore
 └── requirements.txt
 ```

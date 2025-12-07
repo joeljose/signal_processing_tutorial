@@ -1,10 +1,14 @@
-# Module 12: GPU Image Filtering
+# Module 13: GPU Image Filtering
 
 ## Introduction
 
-This module applies GPU acceleration concepts to practical image filtering. We'll implement convolution, separable filters, and other image processing operations on the GPU, demonstrating significant speedups over CPU implementations.
+This module applies GPU acceleration concepts to practical image filtering. Building on Module 11 (GPU Fundamentals) and Module 12 (NVIDIA Libraries), we implement convolution, separable filters, and other image processing operations using multiple GPU frameworks.
 
-We focus on **CuPy** (CUDA-based) and conceptual approaches that apply to any GPU framework.
+We provide practical implementations using:
+
+- **CuPy** - NumPy-like API with automatic GPU acceleration
+- **Triton** - Python-based custom kernels with automatic optimization
+- **Custom CUDA** - Maximum control for specialized operations
 
 ## GPU Convolution
 
