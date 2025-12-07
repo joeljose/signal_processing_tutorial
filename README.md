@@ -1,12 +1,65 @@
-# Signal Processing and Filtering
+# Digital Signal Processing: From Theory to GPU Acceleration
 
-An exploration tutorial on signal processing, filtering, and kernel-based image processing, progressing from fundamentals to GPU-accelerated implementations.
+A comprehensive, hands-on tutorial covering digital signal processing from mathematical foundations through high-performance GPU implementations.
 
-Based on Oppenheim & Schafer's "Discrete-Time Signal Processing"
+## Introduction
+
+**Learn signal processing the right way** - starting with solid theoretical foundations, implementing algorithms from scratch, and scaling up to production-grade GPU acceleration.
+
+This tutorial takes you on a complete journey through digital signal processing (DSP), combining rigorous theory from Oppenheim & Schafer's classic textbook with modern, practical implementations in Python. Unlike courses that treat theory and practice separately, each module here integrates mathematical understanding with working code, visualizations, and real-world applications.
+
+### What Makes This Tutorial Unique?
+
+- **Theory meets practice:** Every concept is both mathematically explained and implemented in Python
+- **Ground-up progression:** From basic discrete signals to GPU-accelerated image filtering
+- **Complete implementations:** No "magic boxes" - you'll build FFT, convolution, filters from scratch
+- **Modern tools:** NumPy, SciPy, CuPy, Triton, and NVIDIA CUDA libraries
+- **Real performance:** Achieve 10-200× speedups using GPU acceleration techniques
+- **Production-ready:** Learn battle-tested NVIDIA libraries (cuFFT, NPP, Thrust)
+
+### Who Is This For?
+
+- **Students** learning DSP who want to see theory in action
+- **Engineers** transitioning from MATLAB to Python
+- **Developers** who need to implement high-performance signal/image processing
+- **Researchers** requiring GPU acceleration for their algorithms
+- **Self-learners** who want comprehensive coverage from basics to advanced
+
+### What You'll Learn
+
+**Fundamentals (Modules 1-4):**
+
+- Discrete-time signals and systems
+- Convolution and correlation
+- DTFT, DFT, and FFT algorithms
+- Frequency domain analysis
+
+**Advanced Processing (Modules 5-10):**
+
+- Filter design in time and frequency domains
+- Windowing and spectral analysis
+- 2D signal processing and image filtering
+- Edge detection and morphological operations
+
+**High-Performance Computing (Modules 11-13):**
+
+- GPU programming with CUDA, CuPy, and Triton
+- NVIDIA libraries: cuFFT (FFT), NPP (image processing), Thrust (algorithms)
+- Optimized convolution and filtering on GPU
+- **10-200× performance improvements** over CPU
+
+### Prerequisites
+
+- Basic Python programming
+- Linear algebra (matrices, vectors)
+- Calculus (derivatives, integrals)
+- Understanding of complex numbers
+
+No prior DSP knowledge required - we start from the beginning!
 
 ## Overview
 
-This repository provides a hands-on learning path through signal processing and filtering concepts, starting with basic 1D signals and progressing to high-performance GPU-based 2D image filtering. Each module includes theory, implementations, visualizations, and practical examples.
+This repository provides 13 comprehensive modules, each including theory documentation, Python implementations, visualizations, exercises, and practical examples. Progress sequentially for the best learning experience, or jump to specific topics using the navigation below.
 
 ## Learning Path
 
@@ -14,7 +67,6 @@ This repository provides a hands-on learning path through signal processing and 
 
 1. **[Signals and Systems](01-signals-and-systems/)** - Continuous and discrete signals, impulse response, LTI systems, periodicity
 2. **[1D Convolution](02-1d-convolution/)** - Mathematical foundation, direct and FFT-based implementation, filtering applications
-
 
 ### Phase 2: Frequency Domain Analysis
 
@@ -61,13 +113,6 @@ Understanding the relationships between different Fourier transforms:
 | DTFT | Discrete, Aperiodic | Continuous, Periodic |
 | DFT | Discrete, Periodic | Discrete, Periodic |
 
-## Prerequisites
-
-- Python 3.8+
-- Basic understanding of linear algebra
-- Familiarity with NumPy
-- Understanding of complex numbers
-
 ## Installation
 
 ```bash
@@ -93,7 +138,7 @@ Start with Module 1 and progress sequentially for the best learning experience.
 
 ## Project Structure
 
-```
+```text
 filtering/
 ├── 01-signals-and-systems/
 ├── 02-1d-convolution/
