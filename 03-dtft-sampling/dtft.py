@@ -209,7 +209,12 @@ if __name__ == "__main__":
     X = dtft_vectorized(x, omega)
 
     # Analytical solution for comparison: X(e^jω) = (1 - a^N e^(-jωN)) / (1 - a e^(-jω))
-    X_analytical = (1 - a**N * np.exp(-1j * omega * N)) / (1 - a * np.exp(-1j * omega))
+    numerator = 1 - a**N * np.exp(-1j * omega * N)
+    denominator = 1 - a * np.exp(-1j * omega)
+    # Avoid division by zero when denominator is very small
+    X_analytical = np.where(np.abs(denominator) > 1e-10,
+                            numerator / denominator,
+                            N * np.ones_like(omega))  # Limit value when a*e^(-jω) ≈ 1
 
     plt.figure(figsize=(12, 6))
     plt.subplot(1, 2, 1)

@@ -28,14 +28,14 @@ This repository provides a hands-on learning path through signal processing and 
 
 ### Phase 4: 2D Signal Processing and Images
 
-8. **[2D Signals and Images](08-2d-signals/)** - Images as 2D signals, 2D DTFT, 2D DFT, separable transforms
-9. **[2D Filtering and Convolution](09-2d-filtering/)** - 2D convolution, frequency domain filtering, separable filters
+8. **[2D Signals and Images](08-2d-signals-images/)** - Images as 2D signals, 2D DTFT, 2D DFT, separable transforms
+9. **[2D DFT and Image Filtering](09-2d-dft-filtering/)** - 2D convolution, frequency domain filtering, separable filters
 10. **[Advanced Image Filters](10-advanced-filters/)** - Gaussian blur, edge detection (Sobel, Laplacian, Canny), morphological operations
 
 ### Phase 5: High-Performance Computing
 
-11. **[GPU Acceleration Basics](11-gpu-basics/)** - Parallel computing concepts, CUDA/OpenCL introduction, memory management
-12. **[GPU Image Filtering](12-gpu-filtering/)** - High-performance kernel-based filtering on GPU, optimization techniques
+11. **[GPU Acceleration Basics](11-gpu-acceleration/)** - Parallel computing concepts, CUDA/OpenCL introduction, memory management
+12. **[GPU Image Filtering](12-gpu-image-filtering/)** - High-performance kernel-based filtering on GPU, optimization techniques
 
 ## Key Concepts Covered
 
@@ -100,13 +100,12 @@ filtering/
 ├── 05-frequency-filtering/
 ├── 06-windowing/
 ├── 07-correlation/
-├── 08-2d-signals/
-├── 09-2d-filtering/
+├── 08-2d-signals-images/
+├── 09-2d-dft-filtering/
 ├── 10-advanced-filters/
-├── 11-gpu-basics/
-├── 12-gpu-filtering/
-├── assets/              # Images and resources
-├── utils/               # Shared utility functions
+├── 11-gpu-acceleration/
+├── 12-gpu-image-filtering/
+├── .gitignore
 └── requirements.txt
 ```
 

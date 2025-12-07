@@ -134,7 +134,7 @@ def detect_periodicity(x, Fs=1.0, plot=False):
         # Find peaks
         peaks, properties = signal.find_peaks(r_norm[1:], height=0.3)
 
-        if len(peaks) > 0:
+        if len(peaks) > 0 and peaks[0] + 1 < len(lags_pos):
             # First peak indicates period
             period_samples = lags_pos[peaks[0] + 1]  # +1 because we excluded lag 0
             period_time = period_samples / Fs
@@ -413,7 +413,7 @@ if __name__ == "__main__":
     plt.title('Normalized Cross-Correlation')
     plt.xlabel('Lag (samples)')
     plt.ylabel('Correlation')
-    plt.legend()
+    plt.legend(loc='upper right')
     plt.grid(True, alpha=0.3)
 
     plt.tight_layout()

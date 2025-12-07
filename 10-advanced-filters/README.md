@@ -15,9 +15,7 @@ $$G(x, y) = \frac{1}{2\pi\sigma^2} e^{-\frac{x^2 + y^2}{2\sigma^2}}$$
 **Key properties:**
 1. **Separable:** Can be computed as two 1D convolutions
 2. **No ringing:** Smooth frequency response
-3. **Rotational
-
-ly symmetric:** Isotropic smoothing
+3. **Rotationally symmetric:** Isotropic smoothing
 4. **Central Limit Theorem:** Repeated convolution → Gaussian
 5. **Scale-space:** Different $\sigma$ represent different scales
 

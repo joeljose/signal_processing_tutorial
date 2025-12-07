@@ -522,7 +522,7 @@ def display_image(image, title='Image', cmap='gray'):
     plt.figure(figsize=(8, 6))
     plt.imshow(image, cmap=cmap)
     plt.title(title)
-    plt.colorbar()
+    plt.colorbar(shrink=0.8, aspect=15)
     plt.axis('off')
     plt.tight_layout()
     plt.show()
