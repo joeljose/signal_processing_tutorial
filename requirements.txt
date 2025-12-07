@@ -1,3 +1,4 @@
+# Core dependencies
 numpy>=1.21.0
 scipy>=1.7.0
 matplotlib>=3.4.0
@@ -5,3 +6,12 @@ Pillow>=9.0.0
 jupyter>=1.0.0
 opencv-python>=4.5.0
 scikit-image>=0.18.0
+
+# GPU acceleration (optional)
+# For NVIDIA GPUs with CUDA 11.x, install: pip install cupy-cuda11x
+# For NVIDIA GPUs with CUDA 12.x, install: pip install cupy-cuda12x
+# Note: CuPy installation depends on your CUDA version
+
+# Triton GPU programming framework (optional)
+triton>=2.0.0
+torch>=2.0.0

@@ -15,6 +15,7 @@ This repository provides a hands-on learning path through signal processing and 
 1. **[Signals and Systems](01-signals-and-systems/)** - Continuous and discrete signals, impulse response, LTI systems, periodicity
 2. **[1D Convolution](02-1d-convolution/)** - Mathematical foundation, direct and FFT-based implementation, filtering applications
 
+
 ### Phase 2: Frequency Domain Analysis
 
 3. **[DTFT and Sampling](03-dtft-sampling/)** - Discrete-Time Fourier Transform, sampling theorem, aliasing, Nyquist criterion

@@ -2,9 +2,11 @@
 Module 11: GPU Acceleration Basics
 Conceptual demonstrations and examples of GPU computing principles
 
-Note: Some examples require CuPy (CUDA) to run. Install with:
-  pip install cupy-cuda11x  # for CUDA 11.x
-  pip install cupy-cuda12x  # for CUDA 12.x
+Note: Examples require GPU libraries. Install with:
+  pip install cupy-cuda11x  # for CUDA 11.x (CuPy)
+  pip install cupy-cuda12x  # for CUDA 12.x (CuPy)
+  pip install triton  # for Triton kernels
+  pip install torch  # required for Triton
 
 For systems without GPU, examples show the code structure and concepts.
 """
@@ -21,6 +23,17 @@ except ImportError:
     GPU_AVAILABLE = False
     print("CuPy not available - showing CPU-only examples")
     print("Install CuPy to enable GPU acceleration")
+
+# Try to import Triton
+try:
+    import triton
+    import triton.language as tl
+    import torch
+    TRITON_AVAILABLE = True
+    print("Triton detected - Triton examples will run")
+except ImportError:
+    TRITON_AVAILABLE = False
+    print("Triton not available - install with: pip install triton torch")
 
 
 # ============================================================================
@@ -376,6 +389,178 @@ def calculate_occupancy():
 
 
 # ============================================================================
+# Triton Examples
+# ============================================================================
+
+def demonstrate_triton_kernel():
+    """
+    Demonstrate Triton kernel programming
+    """
+    print("\nExample: Triton Kernel Programming")
+    print("=" * 50)
+
+    if not TRITON_AVAILABLE:
+        print("Triton not available - showing conceptual example")
+        print("\nTriton kernel for vector addition:")
+        print("""
+@triton.jit
+def add_kernel(x_ptr, y_ptr, output_ptr, n_elements, BLOCK_SIZE: tl.constexpr):
+    # Program ID (which block)
+    pid = tl.program_id(axis=0)
+
+    # Compute offsets
+    block_start = pid * BLOCK_SIZE
+    offsets = block_start + tl.arange(0, BLOCK_SIZE)
+
+    # Mask for boundary checking
+    mask = offsets < n_elements
+
+    # Load, compute, store
+    x = tl.load(x_ptr + offsets, mask=mask)
+    y = tl.load(y_ptr + offsets, mask=mask)
+    output = x + y
+    tl.store(output_ptr + offsets, output, mask=mask)
+
+# Key features:
+# - Python syntax with type hints
+# - Automatic memory coalescing
+# - Built-in boundary checking with masks
+# - JIT compilation for performance
+        """)
+        return
+
+    # Define Triton kernel
+    @triton.jit
+    def add_kernel(
+        x_ptr, y_ptr, output_ptr, n_elements,
+        BLOCK_SIZE: tl.constexpr
+    ):
+        pid = tl.program_id(axis=0)
+        block_start = pid * BLOCK_SIZE
+        offsets = block_start + tl.arange(0, BLOCK_SIZE)
+        mask = offsets < n_elements
+
+        x = tl.load(x_ptr + offsets, mask=mask)
+        y = tl.load(y_ptr + offsets, mask=mask)
+        output = x + y
+        tl.store(output_ptr + offsets, output, mask=mask)
+
+    # Test the kernel
+    size = 1_000_000
+    x = torch.rand(size, device='cuda', dtype=torch.float32)
+    y = torch.rand(size, device='cuda', dtype=torch.float32)
+    output = torch.empty_like(x)
+
+    # Launch configuration
+    BLOCK_SIZE = 1024
+    grid = (triton.cdiv(size, BLOCK_SIZE),)
+
+    # Warm-up
+    add_kernel[grid](x, y, output, size, BLOCK_SIZE=BLOCK_SIZE)
+    torch.cuda.synchronize()
+
+    # Timed run
+    start = time.time()
+    add_kernel[grid](x, y, output, size, BLOCK_SIZE=BLOCK_SIZE)
+    torch.cuda.synchronize()
+    triton_time = (time.time() - start) * 1000
+
+    # Compare with PyTorch built-in
+    start = time.time()
+    result_torch = x + y
+    torch.cuda.synchronize()
+    torch_time = (time.time() - start) * 1000
+
+    print(f"Array size: {size:,} elements")
+    print(f"Triton kernel time: {triton_time:.3f} ms")
+    print(f"PyTorch built-in time: {torch_time:.3f} ms")
+    print(f"Overhead: {(triton_time / torch_time):.2f}x")
+
+    # Verify correctness
+    error = torch.max(torch.abs(output - result_torch)).item()
+    print(f"Max difference: {error:.10f}")
+
+    print("\nTriton advantages:")
+    print("  - Python syntax (easier than CUDA C++)")
+    print("  - Automatic memory optimizations")
+    print("  - Performance close to hand-tuned CUDA")
+
+
+def compare_gpu_frameworks():
+    """
+    Compare different GPU programming frameworks
+    """
+    print("\nExample: GPU Framework Comparison")
+    print("=" * 50)
+
+    size = 5_000_000
+    print(f"Operation: Element-wise addition of {size:,} elements")
+    print(f"\n{'Framework':<20} {'Available':<12} {'Time (ms)':<12} {'Ease of Use'}")
+    print("-" * 65)
+
+    # CPU baseline
+    a_cpu = np.random.rand(size).astype(np.float32)
+    b_cpu = np.random.rand(size).astype(np.float32)
+
+    start = time.time()
+    c_cpu = a_cpu + b_cpu
+    cpu_time = (time.time() - start) * 1000
+    print(f"{'NumPy (CPU)':<20} {'Yes':<12} {cpu_time:>8.2f}    Easiest")
+
+    # CuPy
+    if GPU_AVAILABLE:
+        a_gpu = cp.asarray(a_cpu)
+        b_gpu = cp.asarray(b_cpu)
+
+        # Warm-up
+        _ = a_gpu + b_gpu
+        cp.cuda.Stream.null.synchronize()
+
+        start = time.time()
+        c_gpu = a_gpu + b_gpu
+        cp.cuda.Stream.null.synchronize()
+        cupy_time = (time.time() - start) * 1000
+
+        print(f"{'CuPy':<20} {'Yes':<12} {cupy_time:>8.2f}    Easy")
+    else:
+        print(f"{'CuPy':<20} {'No':<12} {'N/A':<8}    Easy")
+
+    # Triton
+    if TRITON_AVAILABLE:
+        @triton.jit
+        def add_kernel_simple(x_ptr, y_ptr, output_ptr, n, BLOCK_SIZE: tl.constexpr):
+            pid = tl.program_id(0)
+            offs = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
+            mask = offs < n
+            x = tl.load(x_ptr + offs, mask=mask)
+            y = tl.load(y_ptr + offs, mask=mask)
+            tl.store(output_ptr + offs, x + y, mask=mask)
+
+        x_torch = torch.from_numpy(a_cpu).cuda()
+        y_torch = torch.from_numpy(b_cpu).cuda()
+        output_torch = torch.empty_like(x_torch)
+
+        # Warm-up
+        grid = (triton.cdiv(size, 1024),)
+        add_kernel_simple[grid](x_torch, y_torch, output_torch, size, BLOCK_SIZE=1024)
+        torch.cuda.synchronize()
+
+        start = time.time()
+        add_kernel_simple[grid](x_torch, y_torch, output_torch, size, BLOCK_SIZE=1024)
+        torch.cuda.synchronize()
+        triton_time = (time.time() - start) * 1000
+
+        print(f"{'Triton':<20} {'Yes':<12} {triton_time:>8.2f}    Moderate")
+    else:
+        print(f"{'Triton':<20} {'No':<12} {'N/A':<8}    Moderate")
+
+    print("\nRecommendations:")
+    print("  - Prototyping: Use CuPy (NumPy-like API)")
+    print("  - Production kernels: Use Triton (good balance)")
+    print("  - Maximum performance: Use CUDA C++ (full control)")
+
+
+# ============================================================================
 # Run All Examples
 # ============================================================================
 
@@ -401,6 +586,13 @@ def run_all_examples():
     demonstrate_memory_patterns()
     demonstrate_parallel_reduction()
     calculate_occupancy()
+
+    # Triton examples
+    if TRITON_AVAILABLE:
+        print("\n" + "=" * 70)
+        demonstrate_triton_kernel()
+        print("\n" + "=" * 70)
+        compare_gpu_frameworks()
 
     print("\n" + "=" * 70)
     print("All examples completed!")

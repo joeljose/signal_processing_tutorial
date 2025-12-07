@@ -231,13 +231,30 @@ sequenceDiagram
     Note over I,O: Total: O(2K) per pixel
 ```
 
-## Using CuPy for GPU Image Processing
+## GPU Programming Frameworks for Image Processing
+
+### Framework Overview
+
+Three main approaches for GPU image filtering:
+
+1. **CUDA C++**: Maximum control and performance
+2. **CuPy**: Easy NumPy-like API, good performance
+3. **Triton**: Python-based, portable, automatic optimization
 
 ### Installation
+
+**CuPy:**
 
 ```bash
 pip install cupy-cuda11x  # For CUDA 11.x
 pip install cupy-cuda12x  # For CUDA 12.x
+```
+
+**Triton:**
+
+```bash
+pip install triton>=2.0.0
+pip install torch>=2.0.0  # Required for Triton
 ```
 
 ### Basic Example
@@ -312,6 +329,340 @@ convolve_kernel(grid_size, block_size,
                 (image_gpu, kernel_gpu, output_gpu, width, height, ksize))
 ```
 
+## Triton for GPU Image Filtering
+
+**Triton** provides a Python-based approach to GPU programming with automatic optimization and better portability than CUDA.
+
+### Triton 2D Convolution Kernel
+
+```python
+import triton
+import triton.language as tl
+import torch
+
+@triton.jit
+def conv2d_kernel(
+    # Pointers to matrices
+    image_ptr, kernel_ptr, output_ptr,
+    # Image dimensions
+    height, width,
+    # Kernel dimensions
+    ksize,
+    # Strides
+    stride_ih, stride_iw,
+    stride_oh, stride_ow,
+    # Block size
+    BLOCK_SIZE: tl.constexpr,
+):
+    """
+    Triton kernel for 2D convolution
+
+    Each program instance computes one output pixel
+    """
+    # Get program ID
+    pid = tl.program_id(axis=0)
+
+    # Compute 2D position from 1D program ID
+    num_blocks_w = tl.cdiv(width, BLOCK_SIZE)
+    block_row = pid // num_blocks_w
+    block_col = pid % num_blocks_w
+
+    # Thread ID within block
+    tid = tl.program_id(axis=1)
+
+    # Compute output pixel position
+    row = block_row * BLOCK_SIZE + (tid // BLOCK_SIZE)
+    col = block_col * BLOCK_SIZE + (tid % BLOCK_SIZE)
+
+    # Boundary check
+    if row >= height or col >= width:
+        return
+
+    # Initialize accumulator
+    acc = 0.0
+    k_offset = ksize // 2
+
+    # Convolve
+    for ki in range(ksize):
+        for kj in range(ksize):
+            in_row = row + ki - k_offset
+            in_col = col + kj - k_offset
+
+            # Boundary check (zero padding)
+            if in_row >= 0 and in_row < height and in_col >= 0 and in_col < width:
+                # Load image pixel
+                img_idx = in_row * stride_ih + in_col * stride_iw
+                img_val = tl.load(image_ptr + img_idx)
+
+                # Load kernel value
+                k_idx = ki * ksize + kj
+                k_val = tl.load(kernel_ptr + k_idx)
+
+                acc += img_val * k_val
+
+    # Store result
+    out_idx = row * stride_oh + col * stride_ow
+    tl.store(output_ptr + out_idx, acc)
+
+
+def triton_conv2d(image, kernel):
+    """
+    2D convolution using Triton
+
+    Parameters:
+    -----------
+    image : torch.Tensor
+        Input image (H, W)
+    kernel : torch.Tensor
+        Convolution kernel (K, K)
+
+    Returns:
+    --------
+    output : torch.Tensor
+        Filtered image
+    """
+    height, width = image.shape
+    ksize = kernel.shape[0]
+
+    # Allocate output
+    output = torch.zeros_like(image)
+
+    # Configure kernel launch
+    BLOCK_SIZE = 16
+    grid = lambda meta: (
+        tl.cdiv(height, BLOCK_SIZE) * tl.cdiv(width, BLOCK_SIZE),
+    )
+
+    # Launch kernel
+    conv2d_kernel[grid](
+        image, kernel, output,
+        height, width, ksize,
+        image.stride(0), image.stride(1),
+        output.stride(0), output.stride(1),
+        BLOCK_SIZE=BLOCK_SIZE,
+    )
+
+    return output
+```
+
+**Key features:**
+
+- **Python syntax:** Easier to read and write than CUDA C++
+- **Automatic optimization:** Triton compiler optimizes memory access patterns
+- **Type inference:** No manual type annotations needed
+- **Portable:** Works across different GPU vendors (future)
+
+### Triton Separable Filter (Optimized)
+
+**Two-pass implementation for Gaussian blur:**
+
+```python
+@triton.jit
+def separable_row_kernel(
+    input_ptr, output_ptr, kernel_ptr,
+    height, width, ksize,
+    stride_h, stride_w,
+    BLOCK_SIZE: tl.constexpr,
+):
+    """First pass: convolve rows"""
+    # Get position
+    row = tl.program_id(axis=0)
+    col_block = tl.program_id(axis=1)
+
+    # Compute column range for this block
+    col_start = col_block * BLOCK_SIZE
+    cols = col_start + tl.arange(0, BLOCK_SIZE)
+
+    # Mask for valid columns
+    col_mask = cols < width
+
+    k_offset = ksize // 2
+
+    # Initialize accumulators for all columns in block
+    accs = tl.zeros([BLOCK_SIZE], dtype=tl.float32)
+
+    # Convolve
+    for k in range(ksize):
+        # Compute source columns
+        src_cols = cols + k - k_offset
+
+        # Boundary mask
+        valid_mask = col_mask & (src_cols >= 0) & (src_cols < width)
+
+        # Load input values
+        input_idx = row * stride_h + src_cols * stride_w
+        input_vals = tl.load(input_ptr + input_idx, mask=valid_mask, other=0.0)
+
+        # Load kernel value
+        k_val = tl.load(kernel_ptr + k)
+
+        # Accumulate
+        accs += input_vals * k_val
+
+    # Store results
+    output_idx = row * stride_h + cols * stride_w
+    tl.store(output_ptr + output_idx, accs, mask=col_mask)
+
+
+@triton.jit
+def separable_col_kernel(
+    input_ptr, output_ptr, kernel_ptr,
+    height, width, ksize,
+    stride_h, stride_w,
+    BLOCK_SIZE: tl.constexpr,
+):
+    """Second pass: convolve columns"""
+    # Get position
+    col = tl.program_id(axis=0)
+    row_block = tl.program_id(axis=1)
+
+    # Compute row range for this block
+    row_start = row_block * BLOCK_SIZE
+    rows = row_start + tl.arange(0, BLOCK_SIZE)
+
+    # Mask for valid rows
+    row_mask = rows < height
+
+    k_offset = ksize // 2
+
+    # Initialize accumulators
+    accs = tl.zeros([BLOCK_SIZE], dtype=tl.float32)
+
+    # Convolve
+    for k in range(ksize):
+        # Compute source rows
+        src_rows = rows + k - k_offset
+
+        # Boundary mask
+        valid_mask = row_mask & (src_rows >= 0) & (src_rows < height)
+
+        # Load input values
+        input_idx = src_rows * stride_h + col * stride_w
+        input_vals = tl.load(input_ptr + input_idx, mask=valid_mask, other=0.0)
+
+        # Load kernel value
+        k_val = tl.load(kernel_ptr + k)
+
+        # Accumulate
+        accs += input_vals * k_val
+
+    # Store results
+    output_idx = rows * stride_h + col * stride_w
+    tl.store(output_ptr + output_idx, accs, mask=row_mask)
+
+
+def triton_separable_filter(image, kernel_1d):
+    """
+    Separable 2D filtering using Triton (two passes)
+
+    Parameters:
+    -----------
+    image : torch.Tensor
+        Input image
+    kernel_1d : torch.Tensor
+        1D kernel for separable filter
+
+    Returns:
+    --------
+    output : torch.Tensor
+        Filtered image
+    """
+    height, width = image.shape
+    ksize = kernel_1d.shape[0]
+
+    # Intermediate storage
+    temp = torch.zeros_like(image)
+    output = torch.zeros_like(image)
+
+    BLOCK_SIZE = 16
+
+    # Pass 1: Rows
+    grid_rows = (height, tl.cdiv(width, BLOCK_SIZE))
+    separable_row_kernel[grid_rows](
+        image, temp, kernel_1d,
+        height, width, ksize,
+        image.stride(0), image.stride(1),
+        BLOCK_SIZE=BLOCK_SIZE,
+    )
+
+    # Pass 2: Columns
+    grid_cols = (width, tl.cdiv(height, BLOCK_SIZE))
+    separable_col_kernel[grid_cols](
+        temp, output, kernel_1d,
+        height, width, ksize,
+        temp.stride(0), temp.stride(1),
+        BLOCK_SIZE=BLOCK_SIZE,
+    )
+
+    return output
+```
+
+**Advantages:**
+
+- **O(2K) complexity** instead of O(K²)
+- **Vectorized memory access:** Triton handles SIMD automatically
+- **Shared memory:** Triton manages shared memory tiling internally
+
+### Framework Comparison for Image Processing
+
+| Feature | CUDA C++ | CuPy | Triton |
+|---------|----------|------|--------|
+| **Language** | C++ | Python | Python |
+| **Learning curve** | Steep | Easy | Moderate |
+| **Code verbosity** | High | Low | Moderate |
+| **Performance** | Highest | High (90-95% of CUDA) | High (85-95% of CUDA) |
+| **Memory management** | Manual | Automatic | Automatic |
+| **Shared memory** | Manual | Manual (RawKernel) | Automatic |
+| **Portability** | NVIDIA only | NVIDIA only | Multi-vendor (future) |
+| **Debugging** | Difficult | Easy | Moderate |
+| **Custom kernels** | Full control | Via RawKernel | JIT compiled |
+| **Best for** | Max performance, research | Prototyping, most tasks | Complex kernels, portability |
+
+### When to Use Each Framework
+
+```mermaid
+flowchart TD
+    A[Need GPU Image Filtering] --> B{Already have<br/>CUDA C++ code?}
+    B -->|Yes| C[Use CUDA C++]
+    B -->|No| D{Need maximum<br/>performance?}
+
+    D -->|Yes, critical| E{Comfortable with<br/>low-level code?}
+    E -->|Yes| C
+    E -->|No| F[Use Triton]
+
+    D -->|No| G{Simple operations<br/>or prototyping?}
+    G -->|Yes| H[Use CuPy]
+    G -->|No| I{Complex custom<br/>kernels?}
+
+    I -->|Yes| F
+    I -->|No| H
+
+    J[Future: Multi-GPU support?] --> F
+
+    style H fill:#c8e6c9
+    style F fill:#fff9c4
+    style C fill:#ffcdd2
+```
+
+**Recommendations:**
+
+1. **Start with CuPy** for most image processing tasks
+   - Built-in functions for common operations
+   - Easy integration with NumPy
+   - Good performance for standard workflows
+
+2. **Use Triton when:**
+   - You need custom kernels but want Python syntax
+   - Performance is important but not absolutely critical
+   - You want better portability across GPUs
+   - You're implementing novel algorithms
+
+3. **Use CUDA C++ when:**
+   - Every microsecond counts (real-time systems)
+   - You need absolutely maximum performance
+   - You're optimizing well-known bottlenecks
+   - You have existing CUDA codebase
+
 ## Performance Optimization Strategies
 
 ### 1. Memory Access Coalescing
@@ -337,6 +688,7 @@ for row in range(height):
 ### 2. Shared Memory Optimization
 
 **Avoid bank conflicts:**
+
 - Shared memory is divided into banks
 - Threads accessing same bank → serialized (slow)
 - Solution: Pad shared memory arrays
@@ -352,6 +704,7 @@ __shared__ float tile[32][33];  // Extra column
 ### 3. Occupancy Optimization
 
 **Balance:**
+
 - Threads per block
 - Registers per thread
 - Shared memory per block
@@ -553,6 +906,7 @@ print(benchmark(gpu_function, (args,), n_repeat=100))
 ```
 
 **NVIDIA tools:**
+
 - `nvprof`: Command-line profiler
 - Nsight Systems: Visual profiler
 
@@ -577,12 +931,14 @@ image_gpu = cp.array(image, dtype=cp.float64)
 **GPU memory** is limited (typically 8-24 GB)
 
 **Large images:**
+
 - Tile/patch processing
 - Streaming from CPU memory
 
 ### 2. Not All Algorithms Parallelize
 
 **Inherently sequential:**
+
 - Recursive algorithms
 - Prefix sums (though parallel versions exist)
 - Some morphological operations
@@ -592,6 +948,7 @@ image_gpu = cp.array(image, dtype=cp.float64)
 **CUDA:** NVIDIA GPUs only
 
 **Solutions:**
+
 - OpenCL: Cross-platform but more complex
 - SYCL: Modern cross-platform alternative
 - High-level libraries: Abstract hardware details

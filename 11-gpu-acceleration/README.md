@@ -349,6 +349,94 @@ c = a + b  # Computed on GPU
 
 **PyTorch/TensorFlow:** Deep learning frameworks with GPU support
 
+### Triton (Modern GPU Programming)
+
+**Triton** is a Python-based GPU programming language developed by OpenAI that makes writing efficient GPU kernels easier than CUDA while maintaining similar performance.
+
+**Key advantages:**
+- **Python syntax:** More accessible than CUDA C++
+- **Automatic optimization:** Handles memory coalescing, shared memory
+- **Portable:** Works across GPU architectures
+- **Just-in-time compilation:** Compiles at runtime
+
+**Basic Triton kernel:**
+
+```python
+import triton
+import triton.language as tl
+
+@triton.jit
+def add_kernel(
+    x_ptr,  # Pointer to first input
+    y_ptr,  # Pointer to second input
+    output_ptr,  # Pointer to output
+    n_elements,  # Size of arrays
+    BLOCK_SIZE: tl.constexpr  # Number of elements per block
+):
+    # Get program ID
+    pid = tl.program_id(axis=0)
+
+    # Calculate offsets
+    block_start = pid * BLOCK_SIZE
+    offsets = block_start + tl.arange(0, BLOCK_SIZE)
+
+    # Mask for boundary checking
+    mask = offsets < n_elements
+
+    # Load data
+    x = tl.load(x_ptr + offsets, mask=mask)
+    y = tl.load(y_ptr + offsets, mask=mask)
+
+    # Compute
+    output = x + y
+
+    # Store result
+    tl.store(output_ptr + offsets, output, mask=mask)
+
+def add(x: torch.Tensor, y: torch.Tensor):
+    output = torch.empty_like(x)
+    n_elements = output.numel()
+
+    # Launch kernel
+    grid = lambda meta: (triton.cdiv(n_elements, meta['BLOCK_SIZE']),)
+    add_kernel[grid](x, y, output, n_elements, BLOCK_SIZE=1024)
+
+    return output
+```
+
+**Comparison:**
+
+| Feature | CUDA C++ | CuPy | Triton |
+|---------|----------|------|--------|
+| **Language** | C++ | Python | Python |
+| **Ease of use** | Complex | Very Easy | Moderate |
+| **Performance** | Highest | High | High |
+| **Portability** | NVIDIA only | NVIDIA only | Multi-vendor |
+| **Learning curve** | Steep | Gentle | Moderate |
+| **Custom kernels** | Full control | Limited | Good control |
+| **Best for** | Maximum performance | Quick prototyping | Production kernels |
+
+### Choosing the Right Tool
+
+```mermaid
+flowchart TD
+    A[GPU Programming Need] --> B{Need Custom<br/>Kernel?}
+    B -->|No| C[Use CuPy<br/>NumPy-like API]
+    B -->|Yes| D{Complexity?}
+
+    D -->|Simple operations| E[Use CuPy<br/>RawKernel]
+    D -->|Moderate| F[Use Triton<br/>Python-based]
+    D -->|Complex/<br/>Max performance| G[Use CUDA C++<br/>Full control]
+
+    H{Target Platform?} --> I{NVIDIA only?}
+    I -->|Yes| J[CUDA/CuPy/Triton]
+    I -->|No| K[OpenCL or<br/>Triton Intel]
+
+    style C fill:#c8e6c9
+    style F fill:#bbdefb
+    style G fill:#fff9c4
+```
+
 ## Parallel Patterns for Image Processing
 
 ### 1. Element-wise Operations

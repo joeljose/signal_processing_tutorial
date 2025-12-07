@@ -23,6 +23,17 @@ except ImportError:
     GPU_AVAILABLE = False
     print("CuPy not available - using CPU-only fallbacks")
 
+# Try to import Triton
+try:
+    import triton
+    import triton.language as tl
+    import torch
+    TRITON_AVAILABLE = True
+    print("Triton detected - Triton kernels will run")
+except ImportError:
+    TRITON_AVAILABLE = False
+    print("Triton not available - Triton examples will show conceptual code")
+
 
 # ============================================================================
 # Utility Functions
@@ -526,6 +537,418 @@ def demonstrate_custom_kernel():
 
 
 # ============================================================================
+# Triton Kernels
+# ============================================================================
+
+if TRITON_AVAILABLE:
+    @triton.jit
+    def conv2d_kernel(
+        # Pointers to matrices
+        image_ptr, kernel_ptr, output_ptr,
+        # Image dimensions
+        height, width,
+        # Kernel dimensions
+        ksize,
+        # Strides
+        stride_ih, stride_iw,
+        stride_oh, stride_ow,
+        # Block size
+        BLOCK_SIZE: tl.constexpr,
+    ):
+        """Triton kernel for 2D convolution"""
+        # Get program ID
+        pid = tl.program_id(axis=0)
+
+        # Compute 2D position from 1D program ID
+        num_blocks_w = tl.cdiv(width, BLOCK_SIZE)
+        block_row = pid // num_blocks_w
+        block_col = pid % num_blocks_w
+
+        # Thread ID within block
+        tid = tl.program_id(axis=1)
+
+        # Compute output pixel position
+        row = block_row * BLOCK_SIZE + (tid // BLOCK_SIZE)
+        col = block_col * BLOCK_SIZE + (tid % BLOCK_SIZE)
+
+        # Boundary check
+        if row >= height or col >= width:
+            return
+
+        # Initialize accumulator
+        acc = 0.0
+        k_offset = ksize // 2
+
+        # Convolve
+        for ki in range(ksize):
+            for kj in range(ksize):
+                in_row = row + ki - k_offset
+                in_col = col + kj - k_offset
+
+                # Boundary check (zero padding)
+                if in_row >= 0 and in_row < height and in_col >= 0 and in_col < width:
+                    # Load image pixel
+                    img_idx = in_row * stride_ih + in_col * stride_iw
+                    img_val = tl.load(image_ptr + img_idx)
+
+                    # Load kernel value
+                    k_idx = ki * ksize + kj
+                    k_val = tl.load(kernel_ptr + k_idx)
+
+                    acc += img_val * k_val
+
+        # Store result
+        out_idx = row * stride_oh + col * stride_ow
+        tl.store(output_ptr + out_idx, acc)
+
+
+    @triton.jit
+    def separable_row_kernel(
+        input_ptr, output_ptr, kernel_ptr,
+        height, width, ksize,
+        stride_h, stride_w,
+        BLOCK_SIZE: tl.constexpr,
+    ):
+        """First pass: convolve rows"""
+        # Get position
+        row = tl.program_id(axis=0)
+        col_block = tl.program_id(axis=1)
+
+        # Compute column range for this block
+        col_start = col_block * BLOCK_SIZE
+        cols = col_start + tl.arange(0, BLOCK_SIZE)
+
+        # Mask for valid columns
+        col_mask = cols < width
+
+        k_offset = ksize // 2
+
+        # Initialize accumulators for all columns in block
+        accs = tl.zeros([BLOCK_SIZE], dtype=tl.float32)
+
+        # Convolve
+        for k in range(ksize):
+            # Compute source columns
+            src_cols = cols + k - k_offset
+
+            # Boundary mask
+            valid_mask = col_mask & (src_cols >= 0) & (src_cols < width)
+
+            # Load input values
+            input_idx = row * stride_h + src_cols * stride_w
+            input_vals = tl.load(input_ptr + input_idx, mask=valid_mask, other=0.0)
+
+            # Load kernel value
+            k_val = tl.load(kernel_ptr + k)
+
+            # Accumulate
+            accs += input_vals * k_val
+
+        # Store results
+        output_idx = row * stride_h + cols * stride_w
+        tl.store(output_ptr + output_idx, accs, mask=col_mask)
+
+
+    @triton.jit
+    def separable_col_kernel(
+        input_ptr, output_ptr, kernel_ptr,
+        height, width, ksize,
+        stride_h, stride_w,
+        BLOCK_SIZE: tl.constexpr,
+    ):
+        """Second pass: convolve columns"""
+        # Get position
+        col = tl.program_id(axis=0)
+        row_block = tl.program_id(axis=1)
+
+        # Compute row range for this block
+        row_start = row_block * BLOCK_SIZE
+        rows = row_start + tl.arange(0, BLOCK_SIZE)
+
+        # Mask for valid rows
+        row_mask = rows < height
+
+        k_offset = ksize // 2
+
+        # Initialize accumulators
+        accs = tl.zeros([BLOCK_SIZE], dtype=tl.float32)
+
+        # Convolve
+        for k in range(ksize):
+            # Compute source rows
+            src_rows = rows + k - k_offset
+
+            # Boundary mask
+            valid_mask = row_mask & (src_rows >= 0) & (src_rows < height)
+
+            # Load input values
+            input_idx = src_rows * stride_h + col * stride_w
+            input_vals = tl.load(input_ptr + input_idx, mask=valid_mask, other=0.0)
+
+            # Load kernel value
+            k_val = tl.load(kernel_ptr + k)
+
+            # Accumulate
+            accs += input_vals * k_val
+
+        # Store results
+        output_idx = rows * stride_h + col * stride_w
+        tl.store(output_ptr + output_idx, accs, mask=row_mask)
+
+
+def triton_conv2d(image, kernel):
+    """
+    2D convolution using Triton
+
+    Parameters:
+    -----------
+    image : torch.Tensor
+        Input image (H, W)
+    kernel : torch.Tensor
+        Convolution kernel (K, K)
+
+    Returns:
+    --------
+    output : torch.Tensor
+        Filtered image
+    """
+    if not TRITON_AVAILABLE:
+        raise RuntimeError("Triton not available")
+
+    height, width = image.shape
+    ksize = kernel.shape[0]
+
+    # Allocate output
+    output = torch.zeros_like(image)
+
+    # Configure kernel launch
+    BLOCK_SIZE = 16
+    grid = lambda meta: (
+        tl.cdiv(height, BLOCK_SIZE) * tl.cdiv(width, BLOCK_SIZE),
+    )
+
+    # Launch kernel
+    conv2d_kernel[grid](
+        image, kernel, output,
+        height, width, ksize,
+        image.stride(0), image.stride(1),
+        output.stride(0), output.stride(1),
+        BLOCK_SIZE=BLOCK_SIZE,
+    )
+
+    return output
+
+
+def triton_separable_filter(image, kernel_1d):
+    """
+    Separable 2D filtering using Triton (two passes)
+
+    Parameters:
+    -----------
+    image : torch.Tensor
+        Input image
+    kernel_1d : torch.Tensor
+        1D kernel for separable filter
+
+    Returns:
+    --------
+    output : torch.Tensor
+        Filtered image
+    """
+    if not TRITON_AVAILABLE:
+        raise RuntimeError("Triton not available")
+
+    height, width = image.shape
+    ksize = kernel_1d.shape[0]
+
+    # Intermediate storage
+    temp = torch.zeros_like(image)
+    output = torch.zeros_like(image)
+
+    BLOCK_SIZE = 16
+
+    # Pass 1: Rows
+    grid_rows = (height, tl.cdiv(width, BLOCK_SIZE))
+    separable_row_kernel[grid_rows](
+        image, temp, kernel_1d,
+        height, width, ksize,
+        image.stride(0), image.stride(1),
+        BLOCK_SIZE=BLOCK_SIZE,
+    )
+
+    # Pass 2: Columns
+    grid_cols = (width, tl.cdiv(height, BLOCK_SIZE))
+    separable_col_kernel[grid_cols](
+        temp, output, kernel_1d,
+        height, width, ksize,
+        temp.stride(0), temp.stride(1),
+        BLOCK_SIZE=BLOCK_SIZE,
+    )
+
+    return output
+
+
+def demonstrate_triton_filtering():
+    """
+    Demonstrate Triton-based image filtering
+    """
+    print("\nTriton Image Filtering Demo")
+    print("=" * 50)
+
+    if not TRITON_AVAILABLE:
+        print("Triton not available - showing conceptual example")
+        print("\nConceptual Triton 2D convolution:")
+        print("""
+        @triton.jit
+        def conv2d_kernel(image_ptr, kernel_ptr, output_ptr,
+                         height, width, ksize, ...):
+            # Each program instance computes one output pixel
+            row, col = get_position()
+
+            acc = 0.0
+            for ki in range(ksize):
+                for kj in range(ksize):
+                    acc += image[row+ki, col+kj] * kernel[ki, kj]
+
+            output[row, col] = acc
+
+        # Launch:
+        grid = (num_blocks_h, num_blocks_w)
+        conv2d_kernel[grid](image, kernel, output, ...)
+        """)
+        return
+
+    # Create test image
+    size = 512
+    image_np = create_test_image(size, 'checkerboard')
+    image_torch = torch.from_numpy(image_np).cuda()
+
+    # Create kernel
+    kernel_size = 11
+    kernel_np = np.ones((kernel_size, kernel_size), dtype=np.float32) / (kernel_size ** 2)
+    kernel_torch = torch.from_numpy(kernel_np).cuda()
+
+    print(f"Image size: {size}×{size}")
+    print(f"Kernel size: {kernel_size}×{kernel_size}")
+
+    # Warm-up
+    _ = triton_conv2d(image_torch, kernel_torch)
+    torch.cuda.synchronize()
+
+    # Timed run
+    start = time.time()
+    output = triton_conv2d(image_torch, kernel_torch)
+    torch.cuda.synchronize()
+    triton_time = (time.time() - start) * 1000
+
+    print(f"Triton 2D convolution time: {triton_time:.2f} ms")
+
+    # Compare with CuPy if available
+    if GPU_AVAILABLE:
+        image_gpu = cp.asarray(image_np)
+        kernel_gpu = cp.asarray(kernel_np)
+
+        # Warm-up
+        _ = gpu_ndimage.convolve(image_gpu, kernel_gpu, mode='constant')
+        cp.cuda.Stream.null.synchronize()
+
+        # Timed run
+        start = time.time()
+        output_cupy = gpu_ndimage.convolve(image_gpu, kernel_gpu, mode='constant')
+        cp.cuda.Stream.null.synchronize()
+        cupy_time = (time.time() - start) * 1000
+
+        print(f"CuPy convolution time: {cupy_time:.2f} ms")
+        print(f"Triton vs CuPy: {cupy_time / triton_time:.2f}x")
+
+    # Test separable filter
+    print("\nTriton Separable Filter (Gaussian-like)")
+    kernel_1d = torch.tensor([1, 4, 6, 4, 1], dtype=torch.float32).cuda()
+    kernel_1d = kernel_1d / kernel_1d.sum()
+
+    # Warm-up
+    _ = triton_separable_filter(image_torch, kernel_1d)
+    torch.cuda.synchronize()
+
+    # Timed run
+    start = time.time()
+    output_sep = triton_separable_filter(image_torch, kernel_1d)
+    torch.cuda.synchronize()
+    triton_sep_time = (time.time() - start) * 1000
+
+    print(f"Triton separable filter time: {triton_sep_time:.2f} ms")
+    print(f"Speedup vs 2D: {triton_time / triton_sep_time:.2f}x")
+
+
+def compare_gpu_frameworks():
+    """
+    Compare CuPy, Triton, and CPU performance on image filtering
+    """
+    print("\nGPU Framework Comparison")
+    print("=" * 70)
+
+    size = 1024
+    kernel_size = 15
+
+    image_np = create_test_image(size, 'circle')
+    kernel_np = np.ones((kernel_size, kernel_size), dtype=np.float32) / (kernel_size ** 2)
+
+    print(f"Image: {size}×{size}, Kernel: {kernel_size}×{kernel_size}")
+    print(f"{'Framework':<15} {'Time (ms)':<15} {'Speedup vs CPU':<15}")
+    print("-" * 70)
+
+    # CPU baseline
+    start = time.time()
+    _ = cpu_ndimage.convolve(image_np, kernel_np, mode='constant')
+    cpu_time = (time.time() - start) * 1000
+
+    print(f"{'NumPy (CPU)':<15} {cpu_time:>10.2f}      {1.0:>10.1f}x")
+
+    # CuPy
+    if GPU_AVAILABLE:
+        image_gpu = cp.asarray(image_np)
+        kernel_gpu = cp.asarray(kernel_np)
+
+        # Warm-up
+        _ = gpu_ndimage.convolve(image_gpu, kernel_gpu, mode='constant')
+        cp.cuda.Stream.null.synchronize()
+
+        # Timed
+        start = time.time()
+        _ = gpu_ndimage.convolve(image_gpu, kernel_gpu, mode='constant')
+        cp.cuda.Stream.null.synchronize()
+        cupy_time = (time.time() - start) * 1000
+
+        print(f"{'CuPy':<15} {cupy_time:>10.2f}      {cpu_time/cupy_time:>10.1f}x")
+    else:
+        print(f"{'CuPy':<15} {'N/A':>10}      {'N/A':>10}")
+
+    # Triton
+    if TRITON_AVAILABLE:
+        image_torch = torch.from_numpy(image_np).cuda()
+        kernel_torch = torch.from_numpy(kernel_np).cuda()
+
+        # Warm-up
+        _ = triton_conv2d(image_torch, kernel_torch)
+        torch.cuda.synchronize()
+
+        # Timed
+        start = time.time()
+        _ = triton_conv2d(image_torch, kernel_torch)
+        torch.cuda.synchronize()
+        triton_time = (time.time() - start) * 1000
+
+        print(f"{'Triton':<15} {triton_time:>10.2f}      {cpu_time/triton_time:>10.1f}x")
+    else:
+        print(f"{'Triton':<15} {'N/A':>10}      {'N/A':>10}")
+
+    print("\nKey Observations:")
+    print("- CuPy: Easiest to use, excellent performance for standard operations")
+    print("- Triton: Good performance, more control, Python-based kernels")
+    print("- Both show significant speedups over CPU for large images")
+
+
+# ============================================================================
 # Examples
 # ============================================================================
 
@@ -576,17 +999,28 @@ def run_all_examples():
     print("\n" + "=" * 70)
     demonstrate_custom_kernel()
 
+    # Example 8: Triton filtering
+    print("\n" + "=" * 70)
+    demonstrate_triton_filtering()
+
+    # Example 9: Framework comparison
+    print("\n" + "=" * 70)
+    compare_gpu_frameworks()
+
     print("\n" + "=" * 70)
     print("All examples completed!")
 
     # Summary
     if GPU_AVAILABLE:
-        print("\nSummary of Speedups:")
+        print("\nSummary of CuPy Speedups:")
         print(f"  Gaussian Blur:    {results1.get('speedup', 'N/A'):.1f}x")
         print(f"  Convolution:      {results2.get('speedup', 'N/A'):.1f}x")
         print(f"  Sobel Edges:      {results3.get('speedup', 'N/A'):.1f}x")
         print(f"  FFT Filtering:    {results4.get('speedup', 'N/A'):.1f}x")
         print(f"  Batch Processing: {results5.get('speedup', 'N/A'):.1f}x")
+
+    if TRITON_AVAILABLE:
+        print("\nTriton framework also available for custom kernel development!")
 
 
 if __name__ == "__main__":
