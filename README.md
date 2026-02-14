@@ -1,5 +1,6 @@
 # Digital Signal Processing: From Theory to GPU Acceleration
 
+[![CI](https://github.com/joeljose/signal_processing_tutorial/actions/workflows/ci.yml/badge.svg)](https://github.com/joeljose/signal_processing_tutorial/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8+-green.svg)](https://www.python.org/)
 
