@@ -117,8 +117,8 @@ Understanding the relationships between different Fourier transforms:
 
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd filtering
+git clone https://github.com/joeljose/signal_processing_tutorial.git
+cd signal_processing_tutorial
 
 # Install dependencies
 pip install -r requirements.txt
@@ -130,7 +130,7 @@ Each module is self-contained with:
 
 - Theory documentation (README.md) with LaTeX equations
 - Python implementations
-- Jupyter notebooks with interactive examples
+- Jupyter notebooks with interactive examples (select modules)
 - Exercises and solutions
 - Mermaid diagrams for visualization
 
@@ -139,7 +139,7 @@ Start with Module 1 and progress sequentially for the best learning experience.
 ## Project Structure
 
 ```text
-filtering/
+signal_processing_tutorial/
 ├── 01-signals-and-systems/
 ├── 02-1d-convolution/
 ├── 03-dtft-sampling/

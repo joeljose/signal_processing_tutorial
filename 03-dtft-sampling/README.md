@@ -282,4 +282,4 @@ In Module 4, we'll explore the **DFT (Discrete Fourier Transform)**, which is th
 4. Design an anti-aliasing filter and test it on a signal with multiple frequency components
 5. Explore the relationship between $\omega$ and $\Omega$ for different sampling rates
 
-See `dtft.py` and `dtft_sampling.ipynb` for implementations and interactive examples.
+See `dtft.py` for implementations and interactive examples.

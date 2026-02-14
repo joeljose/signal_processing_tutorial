@@ -425,4 +425,4 @@ In Module 6, we'll explore **windowing** and **spectral leakage**, learning how 
 4. Compare phase distortion in minimum-phase vs zero-phase filters
 5. Design an audio equalizer with multiple frequency bands
 
-See `frequency_filtering.py` and `frequency_filtering.ipynb` for implementations.
+See `frequency_filtering.py` for implementations.

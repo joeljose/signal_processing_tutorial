@@ -390,4 +390,4 @@ In Module 7, we'll explore **correlation** - a powerful tool for signal analysis
 5. Analyze time-varying signal using windowed STFT
 6. Measure window normalization factors
 
-See `windowing.py` and `windowing.ipynb` for implementations.
+See `windowing.py` for implementations.

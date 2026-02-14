@@ -525,4 +525,4 @@ Then in Module 12, we'll implement **GPU Image Filtering**:
 8. Test median filter on salt-and-pepper noise
 9. Optimize Sobel using separable implementation
 
-See `advanced_filters.py` and `advanced_filters.ipynb` for implementations.
+See `advanced_filters.py` for implementations.

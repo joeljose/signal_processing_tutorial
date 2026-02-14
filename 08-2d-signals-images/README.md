@@ -676,4 +676,4 @@ Then in Module 10, we'll cover **Advanced Image Filters**:
 7. Experiment with different boundary handling modes
 8. Convert between color spaces (RGB, HSV, YCbCr)
 
-See `images_2d.py` and `images_2d.ipynb` for implementations.
+See `images_2d.py` for implementations.

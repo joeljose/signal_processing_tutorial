@@ -419,4 +419,4 @@ In Module 5, we'll apply DFT/FFT to **frequency domain filtering**, using the co
 5. Use zero-padding to perform linear convolution via FFT
 6. Analyze the frequency spectrum of a composite signal
 
-See `dft_fft.py` and `dft_fft.ipynb` for implementations.
+See `dft_fft.py` for implementations.

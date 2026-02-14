@@ -405,4 +405,4 @@ In Module 8, we'll extend these concepts to **2D signals and images**, where cor
 6. Compute PSD via Wiener-Khinchin theorem
 7. Compare normalized vs unnormalized correlation for template matching
 
-See `correlation.py` and `correlation.ipynb` for implementations.
+See `correlation.py` for implementations.

@@ -590,4 +590,4 @@ In Module 10, we'll explore **Advanced Image Filters** including:
 7. Optimize filtering using separable implementation
 8. Compare spatial vs frequency domain filtering performance
 
-See `image_filtering_2d.py` and `image_filtering_2d.ipynb` for implementations.
+See `image_filtering_2d.py` for implementations.
