@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.11']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy scipy matplotlib Pillow opencv-python-headless scikit-image
+
+      - name: Compile check all Python files
+        run: |
+          python -m py_compile 01-signals-and-systems/examples.py
+          python -m py_compile 02-1d-convolution/convolution.py
+          python -m py_compile 03-dtft-sampling/dtft.py
+          python -m py_compile 04-dft-fft/dft_fft.py
+          python -m py_compile 05-frequency-filtering/frequency_filtering.py
+          python -m py_compile 06-windowing/windowing.py
+          python -m py_compile 07-correlation/correlation.py
+          python -m py_compile 08-2d-signals-images/images_2d.py
+          python -m py_compile 09-2d-dft-filtering/image_filtering_2d.py
+          python -m py_compile 10-advanced-filters/advanced_filters.py
+
+      - name: Import check core modules
+        run: |
+          python -c "
+          import importlib.util, sys, os
+          modules = [
+              ('01-signals-and-systems/examples.py', 'examples'),
+              ('02-1d-convolution/convolution.py', 'convolution'),
+              ('03-dtft-sampling/dtft.py', 'dtft'),
+              ('04-dft-fft/dft_fft.py', 'dft_fft'),
+              ('05-frequency-filtering/frequency_filtering.py', 'frequency_filtering'),
+              ('06-windowing/windowing.py', 'windowing'),
+              ('07-correlation/correlation.py', 'correlation'),
+          ]
+          for path, name in modules:
+              spec = importlib.util.spec_from_file_location(name, path)
+              mod = importlib.util.module_from_spec(spec)
+              spec.loader.exec_module(mod)
+              print(f'OK: {path}')
+          "

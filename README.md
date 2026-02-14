@@ -1,6 +1,26 @@
 # Digital Signal Processing: From Theory to GPU Acceleration
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.8+](https://img.shields.io/badge/Python-3.8+-green.svg)](https://www.python.org/)
+
 A comprehensive, hands-on tutorial covering digital signal processing from mathematical foundations through high-performance GPU implementations.
+
+---
+
+## Table of Contents
+
+- [Introduction](#introduction)
+- [What You'll Build](#what-youll-build)
+- [Learning Path](#learning-path)
+- [Key Concepts Covered](#key-concepts-covered)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Project Structure](#project-structure)
+- [References](#references)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
 
 ## Introduction
 
@@ -56,6 +76,25 @@ This tutorial takes you on a complete journey through digital signal processing 
 - Understanding of complex numbers
 
 No prior DSP knowledge required - we start from the beginning!
+
+## What You'll Build
+
+Here's a preview of the visualizations and analyses you'll create throughout this tutorial:
+
+| Signals & Systems | Convolution & Filtering |
+|:--:|:--:|
+| ![Signals Overview](assets/signals_overview.png) | ![Convolution Filtering](assets/convolution_filtering.png) |
+| *Unit step, sinusoids, exponentials, and sampling* | *Moving average noise reduction at different window sizes* |
+
+| FFT Spectrum Analysis | Frequency-Domain Filter Design |
+|:--:|:--:|
+| ![FFT Spectrum](assets/fft_spectrum.png) | ![Frequency Filtering](assets/frequency_filtering.png) |
+| *Composite signal decomposition and DFT vs FFT performance* | *Lowpass, highpass, bandpass, and bandstop filters* |
+
+| Edge Detection & Advanced Filters |
+|:--:|
+| ![Edge Detection](assets/edge_detection.png) |
+| *Sobel, Prewitt, Laplacian of Gaussian, and Canny edge detection* |
 
 ## Overview
 
@@ -164,8 +203,8 @@ signal_processing_tutorial/
 
 ## Contributing
 
-This is an educational project. Suggestions and improvements are welcome!
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to get started.
 
 ## License
 
-MIT License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
